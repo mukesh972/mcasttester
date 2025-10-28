@@ -1,7 +1,6 @@
 ```markdown
-
 # mcasttester -Miracast test application with event subscription (C++ / CMake)
-
+```
 This application sends real JSON-RPC commands to a Thunder Controller and subscribes to events over WebSocket. You can activate/deactivate plugins, call Miracast methods (setEnable, playRequest, stopRequest, updatePlayerState, etc.), and the application will print incoming events in real time. When a MiracastService client connection request is received, its mac/name are recorded so you can accept/reject from the terminal.
 
 Requirements
@@ -11,14 +10,13 @@ Requirements
 - cmake (for building)
 
 Build
-```bash
 Yocto Build
 If you are building using Yocto, use this command to checkout:
-
+```bash
 devtool add --autorev mcasttester https://github.com/mukesh972/mcasttester.git --srcbranch main
-
+```
 Add the following line in the recipe:
-
+```bash
 inherit cmake pkgconfig
 DEPENDS += "jsoncpp websocketpp systemd boost curl"
 RDEPENDS_${PN} += "jsoncpp"
@@ -30,7 +28,8 @@ Run
 # optional: pass controller URL as argv1, otherwise uses compile-time THUNDER_JSONRPC_URL
 ./mcasttester http://127.0.0.1:9998/jsonrpc
 ```
-Usage
+Usage:
+
 Verification in middleware layer:
 Based on ENABLE_MIRACAST distro, wlan-p2p service is added and MiracastService and MiracastPlayer plugins are added.
 
@@ -42,7 +41,7 @@ touch /opt/miracast_autoconnect
 2. Enable Miracast ports
 
 Add below lines at line 132 /lib/rdk/iptables_init:
-
+```bash
     # MiracastService plugin need to communicate with client through below ports
     # 7236 - RTSP session communication
     # 1990 - UDP streaming for Mirroring
@@ -50,13 +49,13 @@ Add below lines at line 132 /lib/rdk/iptables_init:
     $IPV4_BIN -A INPUT -p tcp -s 192.168.0.0/16 --dport 7236 -j ACCEPT
     $IPV4_BIN -A INPUT -p udp -s 192.168.0.0/16 --dport 1990 -j ACCEPT
     $IPV4_BIN -A INPUT -i p2p+ -p udp --dport 67 -j ACCEPT
-
+```
 Sync and reboot. 
 
 
 3. Set Environmental variables for Westeros for VideoOutput and Run Westeros server
 Note: below is Amlogic environment variables, please use the platform specific export commands
-
+```bash
 export LD_PRELOAD=libwesteros_gl.so.0.0.0
 export WESTEROS_GL_GRAPHICS_MAX_SIZE=1920x1080
 export WESTEROS_GL_MODE=3840x2160x60
@@ -74,15 +73,17 @@ export XDG_RUNTIME_DIR=/tmp
 export AAMP_ENABLE_WESTEROS_SINK=1
 export GST_ENABLE_SVP=1
 westeros --renderer libwesteros_render_embedded.so.0.0.0 --display main0 --embedded --window-size 1920x1080 --noFBO &
-
+```
 
 4. Copy mcasttester application in /opt/ directory and give executable permission.
+```bash
 chmod 777 mcasttester
-
+```
 5.From /opt/ directory run mcasttester
 
-
+```bash
 root@mesonsc2-5:/opt# ./mcasttester
+
 Miracast CLI w/ events
 Controller HTTP JSON-RPC URL: http://127.0.0.1:9998/jsonrpc
 WebSocket event URL (derived): ws://127.0.0.1:9998/jsonrpc
@@ -108,7 +109,7 @@ No client known from events. Wait for onClientConnectionRequest.
 Shutting down event listener...
 Exit
 root@mesonsc2-5:/opt#
-
+```
 NB: After giving step "3. set_enable",  connect mobile device casting and check for the device list, select and wait for "connecting" in mobile, then give step "4. accept". Now navigate and play videos in mobile.
 
-```
+
