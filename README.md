@@ -35,12 +35,12 @@ Based on ENABLE_MIRACAST distro, wlan-p2p service is added and MiracastService a
 
 Steps:
 1. Create the auto connection flag
-
+```bash
 touch /opt/miracast_autoconnect
-
+```
 2. Enable Miracast ports
 
-Add below lines at line 132 /lib/rdk/iptables_init:
+Add below lines at line 132 /lib/rdk/iptables_init if not present:
 ```bash
     # MiracastService plugin need to communicate with client through below ports
     # 7236 - RTSP session communication
