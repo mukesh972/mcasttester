@@ -1,3 +1,36 @@
+```markdown
+
+# mcasttester -Miracast test application with event subscription (C++ / CMake)
+
+This application sends real JSON-RPC commands to a Thunder Controller and subscribes to events over WebSocket. You can activate/deactivate plugins, call Miracast methods (setEnable, playRequest, stopRequest, updatePlayerState, etc.), and the application will print incoming events in real time. When a MiracastService client connection request is received, its mac/name are recorded so you can accept/reject from the terminal.
+
+Requirements
+- boost
+- websocketpp
+- jsoncpp
+- cmake (for building)
+
+Build
+```bash
+Yocto Build
+If you are building using Yocto, use this command to checkout:
+
+devtool add --autorev mcasttester https://github.com/mukesh972/mcasttester.git --srcbranch main
+
+Add the following line in the recipe:
+
+inherit cmake pkgconfig
+DEPENDS += "jsoncpp websocketpp systemd boost curl"
+RDEPENDS_${PN} += "jsoncpp"
+
+```
+
+Run
+```bash
+# optional: pass controller URL as argv1, otherwise uses compile-time THUNDER_JSONRPC_URL
+./mcasttester http://127.0.0.1:9998/jsonrpc
+```
+Usage
 Verification in middleware layer:
 Based on ENABLE_MIRACAST distro, wlan-p2p service is added and MiracastService and MiracastPlayer plugins are added.
 
@@ -77,3 +110,5 @@ Exit
 root@mesonsc2-5:/opt#
 
 NB: After giving step "3. set_enable",  connect mobile device casting and check for the device list, select and wait for "connecting" in mobile, then give step "4. accept". Now navigate and play videos in mobile.
+
+```
