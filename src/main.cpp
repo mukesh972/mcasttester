@@ -1,5 +1,7 @@
 #include "Miracast.h"
 #include "EventListener.h"
+#include "MiracastServiceEvents.h"
+#include "MiracastPlayerEvent.h"
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -50,7 +52,7 @@ static void print_help() {
               << "  2. activate_player\n"
               << "  3. set_enable\n"
               << "  4. accept      # accept last seen client (from events)\n"
-			  << "  5. set_video_rectangle\n"
+	      << "  5. set_video_rectangle\n"
               << "  6. quit\n";
 }
 /*static void print_help() {
@@ -144,7 +146,13 @@ int main(int argc, char **argv) {
     std::mutex last_mutex;
 
     EventListener listener(wsUrl);
-    listener.setNotificationCallback([&](const Json::Value &j){
+    listener.setNotificationCallback([&](const Json::Value &j) {
+        // Only event logs!
+        dispatchMiracastServiceEvent(j);
+        dispatchMiracastPlayerEvent(j);
+        std::cout << "> " << std::flush; // CLI prompt
+    });
+    /*listener.setNotificationCallback([&](const Json::Value &j){
         Json::StreamWriterBuilder w;
         w["indentation"] = "  ";
         std::string pretty = Json::writeString(w, j);
@@ -171,7 +179,7 @@ int main(int argc, char **argv) {
         } else {
             std::cout << "> " << std::flush;
         }
-    });
+    });*/
 
     if (!listener.start()) {
         std::cerr << "Failed to start event listener. Exiting.\n";
