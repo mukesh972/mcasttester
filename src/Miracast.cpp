@@ -256,12 +256,10 @@ bool set_player_state(const std::string &controllerUrl, const std::string &state
 bool set_video_rectangle(const std::string &controllerUrl, const VideoRectangle &rect) {
     bool ok = false;
     Json::Value params;
-    Json::Value rectv;
-    rectv["X"] = rect.X;
-    rectv["Y"] = rect.Y;
-    rectv["W"] = rect.W;
-    rectv["H"] = rect.H;
-    params["video_rectangle"] = rectv;
+    params["X"] = rect.X;
+    params["Y"] = rect.Y;
+    params["W"] = rect.W;
+    params["H"] = rect.H;
     auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.MiracastPlayer.setVideoRectangle", params, ok);
     if (!ok) return false;
     std::cout << "[set_video_rectangle] " << jsonToString(resp) << "\n";
