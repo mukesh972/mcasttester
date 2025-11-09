@@ -52,26 +52,9 @@ static void print_help() {
               << "  2. activate_player\n"
               << "  3. set_enable\n"
               << "  4. accept      # accept last seen client (from events)\n"
-	      << "  5. set_video_rectangle\n"
+	          << "  5. set_video_rectangle\n"
               << "  6. quit\n";
 }
-/*static void print_help() {
-    std::cout << "Available commands:\n"
-              << "  help\n"
-              << "  1. activate_service\n"
-              << "  2. activate_player\n"
-              << "  3. set_enable <true|false>\n"
-              << "  4. accept      # accept last seen client (from events)\n"
-              << "  5. set_logging <level>\n"
-              << "  6. player_set_logging <level>\n"
-              << "  7. set_player_state <state>\n"
-              << "  8. set_video_rectangle <X> <Y> <W> <H>\n"
-              << "  9. set_rtsp_wait_timeout <ms>\n"
-              << " 10. set_video_formats <JSON>\n"
-              << " 11. set_audio_formats <JSON>\n"
-	      << " 12. configure_devicename\n"
-              << " 13. quit\n";
-}*/
 
 static std::vector<std::string> split_tokens(const std::string &s) {
     std::istringstream iss(s);
@@ -152,35 +135,7 @@ int main(int argc, char **argv) {
         dispatchMiracastPlayerEvent(j);
         std::cout << "> " << std::flush; // CLI prompt
     });
-    /*listener.setNotificationCallback([&](const Json::Value &j){
-        Json::StreamWriterBuilder w;
-        w["indentation"] = "  ";
-        std::string pretty = Json::writeString(w, j);
-        std::string event_type = get_event_type(j);
-        std::cout << "\n[Event] (" << event_type << ") " << pretty << "\n";
-
-        if (event_type == "onClientConnectionRequest") {
-            std::string mac, name;
-            if (find_mac_name(j, mac, name)) {
-                {
-                    std::lock_guard<std::mutex> g(last_mutex);
-                    last_mac = mac;
-                    last_name = name;
-                }
-                std::cout << "[Info] Detected client request - mac: " << mac << " name: " << name << "\n";
-                std::cout << "[Info] Use 'accept' or 'reject' to respond.\n> " << std::flush;
-            }
-        } else if (event_type == "onLaunchRequest") {
-            std::cout << "[Info] MiracastService requests launch of MiracastPlayer\n";
-        } else if (event_type == "onClientConnectionError") {
-            std::cout << "[Error] MiracastService client connection error!\n";
-        } else if (event_type == "onStateChange") {
-            std::cout << "[Info] MiracastPlayer state change event received\n";
-        } else {
-            std::cout << "> " << std::flush;
-        }
-    });*/
-
+    
     if (!listener.start()) {
         std::cerr << "Failed to start event listener. Exiting.\n";
         return 1;
