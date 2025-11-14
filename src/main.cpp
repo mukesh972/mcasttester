@@ -53,7 +53,9 @@ static void print_help() {
               << "  3. set_enable\n"
               << "  4. accept      # accept last seen client (from events)\n"
 	          << "  5. set_video_rectangle\n"
-              << "  6. quit\n";
+			  << "  6. set_friendly_name <name>\n"
+              << "  7. get_friendly_name\n"
+              << "  8. quit\n";
 }
 
 static std::vector<std::string> split_tokens(const std::string &s) {
@@ -167,8 +169,6 @@ int main(int argc, char **argv) {
             std::string v = "1";
             bool val = (v == "true" || v == "1");
             if (!set_enable(controllerUrl, val)) std::cerr << "set_enable failed\n";
-			//set device_name to mcasttester instead of Living Room
-			configure_wpa_device_name();
         } else if (cmd == "get_enable") {
             bool enabled;
             if (!get_enable(controllerUrl, enabled)) std::cerr << "get_enable failed\n";
@@ -243,7 +243,24 @@ int main(int argc, char **argv) {
             if (!set_audio_formats(controllerUrl, formats)) std::cerr << "set_audio_formats failed\n";
         } else if (cmd == "configure_devicename") {
             configure_wpa_device_name();
-        }  else if (cmd == "6" || cmd == "quit" || cmd == "exit") {
+        } else if (cmd == "6" || cmd == "set_friendly_name") {
+			std::string friendlyName = "mcasttester";
+            if (tokens.size() < 2) {
+                std::cerr << "Usage: set_friendly_name <name>\n Default is mcasttester\n";
+            } else {
+				friendlyName = tokens[1];	
+			}		
+            if (!set_friendly_name(controllerUrl, friendlyName)) {
+                std::cerr << "set_friendly_name failed\n";
+            }
+        } else if (cmd == "7" || cmd == "get_friendly_name") {
+            std::string friendlyName;
+            if (!get_friendly_name(controllerUrl, friendlyName)) {
+                std::cerr << "get_friendly_name failed\n";
+            } else {
+                std::cout << "friendlyName = " << friendlyName << "\n";
+            }
+        }else if (cmd == "8" || cmd == "quit" || cmd == "exit") {
             break;
         } else {
             std::cerr << "Unknown command\n";

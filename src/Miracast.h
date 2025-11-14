@@ -40,3 +40,7 @@ bool set_rtsp_wait_timeout(const std::string &controllerUrl, int timeout_ms);
 bool player_set_logging(const std::string &controllerUrl, const std::string &level);
 bool set_video_formats(const std::string &controllerUrl, const Json::Value &formats);
 bool set_audio_formats(const std::string &controllerUrl, const Json::Value &formats);
+
+// Function to set/get friendly name
+bool set_friendly_name(const std::string &controllerUrl, const std::string &friendlyName);
+bool get_friendly_name(const std::string &controllerUrl, std::string &friendlyName_out);

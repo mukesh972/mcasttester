@@ -305,3 +305,34 @@ bool set_audio_formats(const std::string &controllerUrl, const Json::Value &form
     std::cout << "[set_audio_formats] " << jsonToString(resp) << "\n";
     return true;
 }
+
+bool set_friendly_name(const std::string &controllerUrl, const std::string &friendlyName) {
+    bool ok = false;
+    Json::Value params;
+    params["friendlyName"] = friendlyName;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.System.1.setFriendlyName", params, ok);
+    if (!ok) return false;
+    std::cout << "[set_friendly_name] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool get_friendly_name(const std::string &controllerUrl, std::string &friendlyName_out) {
+    bool ok = false;
+    Json::Value params; 
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.System.getFriendlyName", params, ok);
+    if (!ok) return false;
+    std::cout << "[get_friendly_name] " << jsonToString(resp) << "\n";
+    try {
+        if (resp.isMember("result")) {
+            const Json::Value &r = resp["result"];
+            if (r.isMember("friendlyName") && r["friendlyName"].isString()) {
+                friendlyName_out = r["friendlyName"].asString();
+                return true;
+            }
+        } else if (resp.isMember("friendlyName") && resp["friendlyName"].isString()) {
+            friendlyName_out = resp["friendlyName"].asString();
+            return true;
+        }
+    } catch(...) {}
+    return false;
+}
