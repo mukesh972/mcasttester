@@ -21,7 +21,7 @@ static std::string jsonToString(const Json::Value &v) {
 }
 
 // helper to parse string into Json::Value
-static bool parseJson(const std::string &s, Json::Value &out) {
+bool parseJson(const std::string &s, Json::Value &out) {
     Json::CharReaderBuilder b;
     std::string errs;
     std::unique_ptr<Json::CharReader> reader(b.newCharReader());
@@ -88,13 +88,12 @@ static Json::Value json_rpc_request(const std::string &controllerUrl, const std:
             std::cerr << "[json_rpc] HTTP code: " << httpCode << " body: " << responseStr << "\n";
         }
     }
-
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     return Json::Value();
 }
 
-/* Implementations */
+/* MiracastService implementations */
 
 bool activate_service(const std::string &controllerUrl) {
     bool ok = false;
@@ -113,26 +112,6 @@ bool deactivate_service(const std::string &controllerUrl) {
     auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "Controller.deactivate", params, ok);
     if (!ok) return false;
     std::cout << "[deactivate_service] " << jsonToString(resp) << "\n";
-    return true;
-}
-
-bool activate_player(const std::string &controllerUrl) {
-    bool ok = false;
-    Json::Value params;
-    params["callsign"] = "org.rdk.MiracastPlayer";
-    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "Controller.activate", params, ok);
-    if (!ok) return false;
-    std::cout << "[activate_player] " << jsonToString(resp) << "\n";
-    return true;
-}
-
-bool deactivate_player(const std::string &controllerUrl) {
-    bool ok = false;
-    Json::Value params;
-    params["callsign"] = "org.rdk.MiracastPlayer";
-    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "Controller.deactivate", params, ok);
-    if (!ok) return false;
-    std::cout << "[deactivate_player] " << jsonToString(resp) << "\n";
     return true;
 }
 
@@ -198,6 +177,38 @@ bool update_player_state(const std::string &controllerUrl, const std::string &ma
     return true;
 }
 
+bool set_logging(const std::string &controllerUrl, const std::string &level) {
+    bool ok = false;
+    Json::Value params;
+    params["level"] = level;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.MiracastService.setLogging", params, ok);
+    if (!ok) return false;
+    std::cout << "[set_logging] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+/* MiracastPlayer implementations */
+
+bool activate_player(const std::string &controllerUrl) {
+    bool ok = false;
+    Json::Value params;
+    params["callsign"] = "org.rdk.MiracastPlayer";
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "Controller.activate", params, ok);
+    if (!ok) return false;
+    std::cout << "[activate_player] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool deactivate_player(const std::string &controllerUrl) {
+    bool ok = false;
+    Json::Value params;
+    params["callsign"] = "org.rdk.MiracastPlayer";
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "Controller.deactivate", params, ok);
+    if (!ok) return false;
+    std::cout << "[deactivate_player] " << jsonToString(resp) << "\n";
+    return true;
+}
+
 bool player_play_request(const std::string &controllerUrl, const DeviceParameters &device_params, const VideoRectangle &rect) {
     bool ok = false;
     Json::Value params;
@@ -230,4 +241,98 @@ bool player_stop_request(const std::string &controllerUrl, const std::string &ma
     if (!ok) return false;
     std::cout << "[player_stop_request] " << jsonToString(resp) << "\n";
     return true;
+}
+
+bool set_player_state(const std::string &controllerUrl, const std::string &state) {
+    bool ok = false;
+    Json::Value params;
+    params["state"] = state;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.MiracastPlayer.setPlayerState", params, ok);
+    if (!ok) return false;
+    std::cout << "[set_player_state] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool set_video_rectangle(const std::string &controllerUrl, const VideoRectangle &rect) {
+    bool ok = false;
+    Json::Value params;
+    params["X"] = rect.X;
+    params["Y"] = rect.Y;
+    params["W"] = rect.W;
+    params["H"] = rect.H;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.MiracastPlayer.setVideoRectangle", params, ok);
+    if (!ok) return false;
+    std::cout << "[set_video_rectangle] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool set_rtsp_wait_timeout(const std::string &controllerUrl, int timeout_ms) {
+    bool ok = false;
+    Json::Value params;
+    params["timeout_ms"] = timeout_ms;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.MiracastPlayer.setRTSPWaitTimeout", params, ok);
+    if (!ok) return false;
+    std::cout << "[set_rtsp_wait_timeout] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool player_set_logging(const std::string &controllerUrl, const std::string &level) {
+    bool ok = false;
+    Json::Value params;
+    params["level"] = level;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.MiracastPlayer.setLogging", params, ok);
+    if (!ok) return false;
+    std::cout << "[player_set_logging] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool set_video_formats(const std::string &controllerUrl, const Json::Value &formats) {
+    bool ok = false;
+    Json::Value params;
+    params["formats"] = formats;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.MiracastPlayer.setVideoFormats", params, ok);
+    if (!ok) return false;
+    std::cout << "[set_video_formats] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool set_audio_formats(const std::string &controllerUrl, const Json::Value &formats) {
+    bool ok = false;
+    Json::Value params;
+    params["formats"] = formats;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.MiracastPlayer.setAudioFormats", params, ok);
+    if (!ok) return false;
+    std::cout << "[set_audio_formats] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool set_friendly_name(const std::string &controllerUrl, const std::string &friendlyName) {
+    bool ok = false;
+    Json::Value params;
+    params["friendlyName"] = friendlyName;
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.System.1.setFriendlyName", params, ok);
+    if (!ok) return false;
+    std::cout << "[set_friendly_name] " << jsonToString(resp) << "\n";
+    return true;
+}
+
+bool get_friendly_name(const std::string &controllerUrl, std::string &friendlyName_out) {
+    bool ok = false;
+    Json::Value params; 
+    auto resp = json_rpc_request(normalize_controller_url(controllerUrl), "org.rdk.System.getFriendlyName", params, ok);
+    if (!ok) return false;
+    std::cout << "[get_friendly_name] " << jsonToString(resp) << "\n";
+    try {
+        if (resp.isMember("result")) {
+            const Json::Value &r = resp["result"];
+            if (r.isMember("friendlyName") && r["friendlyName"].isString()) {
+                friendlyName_out = r["friendlyName"].asString();
+                return true;
+            }
+        } else if (resp.isMember("friendlyName") && resp["friendlyName"].isString()) {
+            friendlyName_out = resp["friendlyName"].asString();
+            return true;
+        }
+    } catch(...) {}
+    return false;
 }

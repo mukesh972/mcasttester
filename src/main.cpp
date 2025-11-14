@@ -1,5 +1,7 @@
 #include "Miracast.h"
 #include "EventListener.h"
+#include "MiracastServiceEvents.h"
+#include "MiracastPlayerEvent.h"
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -8,6 +10,40 @@
 #include <atomic>
 #include <mutex>
 #include <json/json.h>
+#include <sys/stat.h>
+#include <cstdlib>
+#include <cstdio>
+
+static void ensure_autoconnect_file() {
+    const char* path = "/opt/miracast_autoconnect";
+    struct stat buffer;
+    if (stat(path, &buffer) == 0) {
+        std::cout << "Autoconnect file already exists.\n";
+    } else {
+        int result = std::system("touch /opt/miracast_autoconnect");
+        if (result != 0) {
+            std::cerr << "Failed to create /opt/miracast_autoconnect file.\n";
+        } else {
+            std::cout << "Autoconnect file created successfully.\n";
+        }
+    }
+}
+
+static void configure_wpa_device_name() {
+    FILE* pipe = popen("wpa_cli -ip2p0", "w");
+    if (!pipe) {
+        std::cerr << "Failed to open wpa_cli pipe." << std::endl;
+        return;
+    }
+
+    // Send command to set device name
+    fprintf(pipe, "SET device_name mcasttester\n");
+    fflush(pipe);
+
+    // Close the pipe
+    pclose(pipe);
+    std::cout << "Device name set to 'mcasttester' via wpa_cli." << std::endl;
+}
 
 static void print_help() {
     std::cout << "Available commands:\n"
@@ -16,9 +52,11 @@ static void print_help() {
               << "  2. activate_player\n"
               << "  3. set_enable\n"
               << "  4. accept      # accept last seen client (from events)\n"
-              << "  5. quit\n";
+	          << "  5. set_video_rectangle\n"
+			  << "  6. set_friendly_name <name>\n"
+              << "  7. get_friendly_name\n"
+              << "  8. quit\n";
 }
-
 
 static std::vector<std::string> split_tokens(const std::string &s) {
     std::istringstream iss(s);
@@ -54,6 +92,20 @@ static bool find_mac_name(const Json::Value &j, std::string &mac, std::string &n
     return false;
 }
 
+// Detect event type by key
+static std::string get_event_type(const Json::Value &j) {
+    if (j.isMember("method")) {
+        return j["method"].asString();
+    }
+    if (j.isMember("event")) {
+        return j["event"].asString();
+    }
+    if (j.isMember("state")) return "onStateChange";
+    if (j.isMember("connectionError") || j.isMember("error")) return "onClientConnectionError";
+    if (j.isMember("launchRequest")) return "onLaunchRequest";
+    return "unknown";
+}
+
 int main(int argc, char **argv) {
     std::string controllerUrl;
     if (argc > 1) {
@@ -67,38 +119,25 @@ int main(int argc, char **argv) {
     }
     std::string wsUrl = http_to_ws(controllerUrl);
 
+    //To enable miracast 
+    ensure_autoconnect_file();
+   
     std::cout << "Miracast CLI w/ events\nController HTTP JSON-RPC URL: " << controllerUrl << "\n";
     std::cout << "WebSocket event URL (derived): " << wsUrl << "\n";
     print_help();
 
-    // last seen client (from events)
     std::string last_mac;
     std::string last_name;
     std::mutex last_mutex;
 
     EventListener listener(wsUrl);
-    listener.setNotificationCallback([&](const Json::Value &j){
-        // Print incoming notification (pretty)
-        Json::StreamWriterBuilder w;
-        w["indentation"] = "  ";
-        std::string pretty = Json::writeString(w, j);
-        std::cout << "\n[Event] " << pretty << "\n";
-
-        // Try to detect client connection request (mac/name)
-        std::string mac, name;
-        if (find_mac_name(j, mac, name)) {
-            {
-                std::lock_guard<std::mutex> g(last_mutex);
-                last_mac = mac;
-                last_name = name;
-            }
-            std::cout << "[Info] Detected client request - mac: " << mac << " name: " << name << "\n";
-            std::cout << "[Info] Use 'accept' or 'reject' to respond.\n> " << std::flush;
-        } else {
-            std::cout << "> " << std::flush;
-        }
+    listener.setNotificationCallback([&](const Json::Value &j) {
+        // Only event logs!
+        dispatchMiracastServiceEvent(j);
+        dispatchMiracastPlayerEvent(j);
+        std::cout << "> " << std::flush; // CLI prompt
     });
-
+    
     if (!listener.start()) {
         std::cerr << "Failed to start event listener. Exiting.\n";
         return 1;
@@ -125,7 +164,7 @@ int main(int argc, char **argv) {
         } else if (cmd == "deactivate_player") {
             if (!deactivate_player(controllerUrl)) std::cerr << "deactivate_player failed\n";
         } else if (cmd == "3" || cmd == "set_enable") {
-             /*if (tokens.size() != 2) { std::cerr << "Usage: set_enable true|false\n"; continue; }
+            /*if (tokens.size() != 2) { std::cerr << "Usage: set_enable true|false\n"; continue; }
             std::string v = tokens[1]; std::transform(v.begin(), v.end(), v.begin(), ::tolower);*/
             std::string v = "1";
             bool val = (v == "true" || v == "1");
@@ -167,7 +206,61 @@ int main(int argc, char **argv) {
             std::string reason;
             for (size_t i=4;i<tokens.size();++i) { if (i>4) reason += " "; reason += tokens[i]; }
             if (!update_player_state(controllerUrl, mac, state, reason_code, reason)) std::cerr << "update failed\n";
-        } else if (cmd == "5" || cmd == "quit" || cmd == "exit") {
+        } else if (cmd == "set_logging") {
+            if (tokens.size() < 2) { std::cerr << "Usage: set_logging <level>\n"; continue; }
+            if (!set_logging(controllerUrl, tokens[1])) std::cerr << "set_logging failed\n";
+        } else if (cmd == "player_set_logging") {
+            if (tokens.size() < 2) { std::cerr << "Usage: player_set_logging <level>\n"; continue; }
+            if (!player_set_logging(controllerUrl, tokens[1])) std::cerr << "player_set_logging failed\n";
+        } else if (cmd == "set_player_state") {
+            if (tokens.size() < 2) { std::cerr << "Usage: set_player_state <state>\n"; continue; }
+            if (!set_player_state(controllerUrl, tokens[1])) std::cerr << "set_player_state failed\n";
+        } else if (cmd == "5" || cmd == "set_video_rectangle") {
+            /*if (tokens.size() != 5) { std::cerr << "Usage: set_video_rectangle <X> <Y> <W> <H>\n"; continue; }*/
+            VideoRectangle rect;
+            /*try {
+                rect.X = std::stoi(tokens[1]); rect.Y = std::stoi(tokens[2]);
+                rect.W = std::stoi(tokens[3]); rect.H = std::stoi(tokens[4]);
+            } catch(...) { std::cerr << "Invalid numbers\n"; continue; }*/
+			rect.X = 0; rect.Y = 0;
+			rect.W = 1920; rect.H = 1080;
+            if (!set_video_rectangle(controllerUrl, rect)) std::cerr << "set_video_rectangle failed\n";
+        } else if (cmd == "set_rtsp_wait_timeout") {
+            if (tokens.size() < 2) { std::cerr << "Usage: set_rtsp_wait_timeout <ms>\n"; continue; }
+            int ms = 0; try { ms = std::stoi(tokens[1]); } catch (...) { std::cerr << "Invalid ms\n"; continue; }
+            if (!set_rtsp_wait_timeout(controllerUrl, ms)) std::cerr << "set_rtsp_wait_timeout failed\n";
+        } else if (cmd == "set_video_formats") {
+            if (tokens.size() < 2) { std::cerr << "Usage: set_video_formats <JSON>\n"; continue; }
+            Json::Value formats;
+            std::string json_str = line.substr(line.find(tokens[1]));
+            if (!parseJson(json_str, formats)) { std::cerr << "Invalid JSON\n"; continue; }
+            if (!set_video_formats(controllerUrl, formats)) std::cerr << "set_video_formats failed\n";
+        } else if (cmd == "set_audio_formats") {
+            if (tokens.size() < 2) { std::cerr << "Usage: set_audio_formats <JSON>\n"; continue; }
+            Json::Value formats;
+            std::string json_str = line.substr(line.find(tokens[1]));
+            if (!parseJson(json_str, formats)) { std::cerr << "Invalid JSON\n"; continue; }
+            if (!set_audio_formats(controllerUrl, formats)) std::cerr << "set_audio_formats failed\n";
+        } else if (cmd == "configure_devicename") {
+            configure_wpa_device_name();
+        } else if (cmd == "6" || cmd == "set_friendly_name") {
+			std::string friendlyName = "mcasttester";
+            if (tokens.size() < 2) {
+                std::cerr << "Usage: set_friendly_name <name>\n Default is mcasttester\n";
+            } else {
+				friendlyName = tokens[1];	
+			}		
+            if (!set_friendly_name(controllerUrl, friendlyName)) {
+                std::cerr << "set_friendly_name failed\n";
+            }
+        } else if (cmd == "7" || cmd == "get_friendly_name") {
+            std::string friendlyName;
+            if (!get_friendly_name(controllerUrl, friendlyName)) {
+                std::cerr << "get_friendly_name failed\n";
+            } else {
+                std::cout << "friendlyName = " << friendlyName << "\n";
+            }
+        }else if (cmd == "8" || cmd == "quit" || cmd == "exit") {
             break;
         } else {
             std::cerr << "Unknown command\n";
